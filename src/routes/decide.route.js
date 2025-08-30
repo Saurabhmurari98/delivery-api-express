@@ -3,7 +3,7 @@ import { decide } from "../services/decide.service.js";
 
 const router = Router();
 
-// POST /v1/decide
+
 router.post("/", (req, res) => {
   try {
     const result = decide(req.body);

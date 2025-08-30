@@ -2,10 +2,10 @@ import { getDistanceKm } from "../utils/distance.js";
 
 const TRAFFIC_ADD_MIN = { low: 0, medium: 5, high: 10 };
 const WEATHER_ADD_MIN = { clear: 0, rain: 7, storm: 12 };
-const BASE_MIN_PER_KM = 4; // 4 min/km baseline
+const BASE_MIN_PER_KM = 4; 
 
-const BASE_FARE = 30;          // ₹
-const FARE_PER_KM = 5;         // ₹/km
+const BASE_FARE = 30;         
+const FARE_PER_KM = 5;         
 const TRAFFIC_SURGE = { low: 0, medium: 0, high: 10 };
 const WEATHER_SURGE = { clear: 0, rain: 5, storm: 10 };
 
@@ -23,7 +23,6 @@ export function decide(request) {
   if (!Array.isArray(riders) || riders.length === 0)
     throw new Error("riders missing/empty");
 
-  // pick best rider (rating↑, distance↓, weekly earning↓)
   let best = null;
 
   for (const rider of riders) {
@@ -45,7 +44,6 @@ export function decide(request) {
 
   if (!best) throw new Error("No valid rider with location");
 
-  // time (minutes)
   const timeFromDistance = best.distKm * BASE_MIN_PER_KM;
   const timeTraffic = TRAFFIC_ADD_MIN[traffic] ?? 0;
   const timeWeather = WEATHER_ADD_MIN[weather] ?? 0;
@@ -53,7 +51,6 @@ export function decide(request) {
     (food_ready_time || 0) + timeFromDistance + timeTraffic + timeWeather
   );
 
-  // price (₹)
   const price =
     BASE_FARE +
     best.distKm * FARE_PER_KM +
