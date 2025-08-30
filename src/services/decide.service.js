@@ -1,13 +1,7 @@
 import { getDistanceKm } from "../utils/distance.js";
 
-const TRAFFIC_ADD_MIN = { low: 0, medium: 5, high: 10 };
-const WEATHER_ADD_MIN = { clear: 0, rain: 7, storm: 12 };
-const BASE_MIN_PER_KM = 4; 
-
 const BASE_FARE = 30;         
 const FARE_PER_KM = 5;         
-const TRAFFIC_SURGE = { low: 0, medium: 0, high: 10 };
-const WEATHER_SURGE = { clear: 0, rain: 5, storm: 10 };
 
 export function decide(request) {
   const {
@@ -35,27 +29,39 @@ export function decide(request) {
       rider.location.lng
     );
 
-    const score = rider.rating * 10 - dist * 2 - (rider.weekly_earning || 0) / 100;
-
-    if (!best || score > best.score) {
-      best = { id: rider.id, distKm: dist, score };
+    // ✅ Select by nearest first, rating tie breaker
+    if (
+      !best ||
+      dist < best.distKm ||
+      (Math.abs(dist - best.distKm) < 0.2 && rider.rating > best.rating)
+    ) {
+      best = { id: rider.id, distKm: dist, rating: rider.rating };
     }
   }
 
   if (!best) throw new Error("No valid rider with location");
 
-  const timeFromDistance = best.distKm * BASE_MIN_PER_KM;
-  const timeTraffic = TRAFFIC_ADD_MIN[traffic] ?? 0;
-  const timeWeather = WEATHER_ADD_MIN[weather] ?? 0;
+  // ✅ Dynamic average speed (km/h)
+  let baseSpeed = 25; // normal
+  if (traffic === "medium") baseSpeed = 20;
+  if (traffic === "high") baseSpeed = 15;
+
+  if (weather === "rain") baseSpeed -= 3;
+  if (weather === "storm") baseSpeed -= 7;
+
+  if (baseSpeed < 8) baseSpeed = 8; 
+
+  const timeFromDistance = (best.distKm / baseSpeed) * 60;
   const estimatedMinutes = Math.round(
-    (food_ready_time || 0) + timeFromDistance + timeTraffic + timeWeather
+    (food_ready_time || 0) + timeFromDistance
   );
 
   const price =
     BASE_FARE +
     best.distKm * FARE_PER_KM +
-    (TRAFFIC_SURGE[traffic] ?? 0) +
-    (WEATHER_SURGE[weather] ?? 0);
+    (traffic === "high" ? 10 : 0) +
+    (weather === "rain" ? 5 : 0) +
+    (weather === "storm" ? 10 : 0);
 
   return {
     rider_id: best.id,
